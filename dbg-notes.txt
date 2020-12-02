@@ -1,0 +1,7 @@
+Since I usually just fall back to redbug:
+
+dbg:start().
+dbg:tracer().
+%% If you want non-local function calls, other processes, you'd use dbg:tp() instead of tpl
+dbg:tpl(Module, Function, Arity, []).
+dbg:p(all, c).

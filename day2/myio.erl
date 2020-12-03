@@ -1,4 +1,5 @@
 -module(myio).
+-include_lib("eunit/include/eunit.hrl").
 -compile(export_all).
 
 open_file(Filename) ->
@@ -78,3 +79,20 @@ maybe_chomp([]) ->
     [];
 maybe_chomp([Line | _Leftover]) ->
     Line.
+
+%%%%%% Unit tests
+
+chomp_noop_test() ->
+    "   foo " == chomp("   foo ").
+
+chomp_eol_test() ->
+    "   foo " == chomp("   foo \n").
+
+chomp_eol2_test() ->
+    "   foo " == chomp("   foo \r\n").
+
+chomp_multi_test() ->
+    " " == chomp(" \n foo \r").
+
+chomp_begin_eol_test() ->
+    " foo" == chomp("\n foo").

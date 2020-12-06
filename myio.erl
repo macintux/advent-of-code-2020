@@ -1,9 +1,43 @@
 -module(myio).
+-include_lib("eunit/include/eunit.hrl").
 -compile(export_all).
 
 open_file(Filename) ->
     {ok, Fh} = file:open(Filename, [read]),
     Fh.
+
+%% Time to make some smarter utility functions. For day 4 2020 I need
+%% a way to convert a file to a sequence of maps.
+file_to_maps({ok, Fh}) ->
+    file_to_maps(next_line(Fh), Fh, #{}, []);
+file_to_maps(Filename) ->
+    file_to_maps(file:open(Filename, [read])).
+
+str_to_kv_fold(KV, M) ->
+    [K, V] = string:split(KV, ":"),
+    M#{K => V}.
+
+file_to_maps(eof, _Fh, Map, Accum) ->
+    [Map|Accum];
+file_to_maps(Line, Fh, Map, Accum) when length(Line) == 0 ->
+    file_to_maps(next_line(Fh), Fh, #{}, [Map|Accum]);
+file_to_maps(Line, Fh, Map, Accum) ->
+    KVs = string:split(Line, " ", all),
+    file_to_maps(next_line(Fh), Fh,
+                 lists:foldl(fun str_to_kv_fold/2, Map, KVs),
+                 Accum).
+
+%% fold_file folds across each line in the file character by
+%% character; sometimes you want to process the lines as a unit.
+fold_lines(Fun, Acc, Filename) ->
+    Fh = open_file(Filename),
+    InputFun = fun next_line/1,
+    real_fold_lines(Fun, Acc, InputFun(Fh), Fh, InputFun).
+
+real_fold_lines(_Fun, Acc, eof, _Fh, _InputFun) ->
+    Acc;
+real_fold_lines(Fun, Acc, Input, Fh, InputFun) ->
+    real_fold_lines(Fun, Fun(Input, Acc), InputFun(Fh), Fh, InputFun).
 
 all_integers(Filename) ->
     lists:reverse(fold_file(fun(X, Acc) -> [X|Acc] end, [], Filename)).
@@ -54,6 +88,8 @@ split_line(Line, Delim) ->
 next_line() ->
     chomp(io:get_line("")).
 
+next_line({fh, Fh}) ->
+    next_line(Fh);
 next_line(Fh) ->
     chomp(io:get_line(Fh, "")).
 
@@ -66,3 +102,20 @@ maybe_chomp([]) ->
     [];
 maybe_chomp([Line | _Leftover]) ->
     Line.
+
+%%%%%% Unit tests
+
+chomp_noop_test() ->
+    "   foo " == chomp("   foo ").
+
+chomp_eol_test() ->
+    "   foo " == chomp("   foo \n").
+
+chomp_eol2_test() ->
+    "   foo " == chomp("   foo \r\n").
+
+chomp_multi_test() ->
+    " " == chomp(" \n foo \r").
+
+chomp_begin_eol_test() ->
+    " foo" == chomp("\n foo").

@@ -8,24 +8,31 @@ open_file(Filename) ->
 
 %% Time to make some smarter utility functions. For day 4 2020 I need
 %% a way to convert a file to a sequence of maps.
-file_to_maps({ok, Fh}) ->
-    file_to_maps(next_line(Fh), Fh, #{}, []);
-file_to_maps(Filename) ->
-    file_to_maps(file:open(Filename, [read])).
+file_to_maps(File) ->
+    file_to_maps(File, ":").
 
-str_to_kv_fold(KV, M) ->
-    [K, V] = string:split(KV, ":"),
+%% Separator is internal to key/value pairs. If we end up with
+%% something other than whitespace separating the pairs themselves,
+%% will have to extend this.
+file_to_maps({ok, Fh}, Separator) ->
+    file_to_maps(next_line(Fh), Fh, #{}, [], Separator);
+file_to_maps(Filename, Separator) ->
+    file_to_maps(file:open(Filename, [read]), Separator).
+
+str_to_kv_fold(KV, M, Separator) ->
+    [K, V] = string:split(KV, Separator),
     M#{K => V}.
 
-file_to_maps(eof, _Fh, Map, Accum) ->
+file_to_maps(eof, _Fh, Map, Accum, _Separator) ->
     [Map|Accum];
-file_to_maps(Line, Fh, Map, Accum) when length(Line) == 0 ->
-    file_to_maps(next_line(Fh), Fh, #{}, [Map|Accum]);
-file_to_maps(Line, Fh, Map, Accum) ->
+file_to_maps(Line, Fh, Map, Accum, Separator) when length(Line) == 0 ->
+    file_to_maps(next_line(Fh), Fh, #{}, [Map|Accum], Separator);
+file_to_maps(Line, Fh, Map, Accum, Separator) ->
     KVs = string:split(Line, " ", all),
     file_to_maps(next_line(Fh), Fh,
-                 lists:foldl(fun str_to_kv_fold/2, Map, KVs),
-                 Accum).
+                 lists:foldl(fun(KV, M) -> str_to_kv_fold(KV, M, Separator) end,
+                             Map, KVs),
+                 Accum, Separator).
 
 %% fold_file folds across each line in the file character by
 %% character; sometimes you want to process the lines as a unit.

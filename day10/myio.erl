@@ -49,6 +49,14 @@ real_fold_lines(Fun, Acc, Input, Fh, InputFun) ->
 all_integers(Filename) ->
     lists:reverse(fold_file(fun(X, Acc) -> [X|Acc] end, [], Filename)).
 
+ints_to_map(Ints) ->
+    ints_to_map(Ints, true).
+
+ints_to_map(Ints, Val) ->
+    lists:foldl(fun(I, M) -> maps:put(I, Val, M) end,
+                maps:new(), Ints).
+
+
 fold_file(Fun, Acc, Filename) ->
     fold_file(Fun, Acc, Filename, fun grab_line/1).
 
